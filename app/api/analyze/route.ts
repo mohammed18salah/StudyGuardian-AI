@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { genAI } from "@/lib/gemini";
+import { getSmartGeminiClient } from "@/lib/gemini";
 import { HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
 // Configure maximum duration for the API route
@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
       try {
         console.log(`Attempting analysis with model: ${modelName}`);
 
-        // Get the specific model instance
-        const modelInstance = genAI.getGenerativeModel({
+        // Get the specific model instance using a smart client (auto-rotating keys)
+        const modelInstance = getSmartGeminiClient().getGenerativeModel({
           model: modelName,
           // Safety settings to prevent blocking academic content
           safetySettings: [
