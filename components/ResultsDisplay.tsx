@@ -3,7 +3,7 @@
 import { AnalysisResult } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion } from "framer-motion";
+import { motion, Variants } from "framer-motion";
 import { BookOpen, HelpCircle, Lightbulb, ListChecks, Download, Copy, Check, Sparkles } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
 import { useState } from "react";
@@ -13,7 +13,7 @@ interface ResultsDisplayProps {
     data: AnalysisResult;
 }
 
-const container = {
+const container: Variants = {
     hidden: { opacity: 0 },
     show: {
         opacity: 1,
@@ -24,7 +24,7 @@ const container = {
     },
 };
 
-const item = {
+const item: Variants = {
     hidden: { opacity: 0, y: 30, scale: 0.95 },
     show: {
         opacity: 1,
