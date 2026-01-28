@@ -72,4 +72,4 @@ Using a custom-tuned AI prompt engineering strategy (the **Feynman Technique**),
 5.  Open [http://localhost:3000](http://localhost:3000) and start learning!
 
 ---
-*Built with ❤️ for the Hackathon Community.*
+*Built with ❤️ for the Hackathon Community by **Mohammed Salahuldeen**.*
