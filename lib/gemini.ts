@@ -3,11 +3,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
-    console.warn("Missing GEMINI_API_KEY in environment variables");
+  console.warn("Missing GEMINI_API_KEY in environment variables");
 }
 
+// Export the client so we can instantiate different models dynamically
 export const genAI = new GoogleGenerativeAI(apiKey || "");
-
-export const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-});

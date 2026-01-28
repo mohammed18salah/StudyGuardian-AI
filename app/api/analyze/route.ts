@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { model } from "@/lib/gemini";
-import pdf from "pdf-parse";
+import { genAI } from "@/lib/gemini";
+import { HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 
-// Configure maximum duration for the API route (mostly for Vercel)
+// Configure maximum duration for the API route
 export const maxDuration = 60;
 
 const PROMPT_INSTRUCTIONS = `
@@ -41,37 +41,27 @@ export async function POST(req: NextRequest) {
     let inputPart;
     let textContent = "";
 
-    // Handle File Upload
+    // Handle File Upload - Pass raw data to Gemini
     if (file) {
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
 
-      if (file.type === "application/pdf") {
-        try {
-          const pdfData = await pdf(buffer);
-          textContent = pdfData.text;
-          // Prompt for Text Analysis (from PDF)
-        } catch (error) {
-           console.error("PDF Parse Error:", error);
-           return NextResponse.json(
-             { error: "Failed to parse PDF file." },
-             { status: 500 }
-           );
-        }
-      } else if (file.type.startsWith("image/")) {
-        // Image Processing
-        inputPart = {
-          inlineData: {
-            data: buffer.toString("base64"),
-            mimeType: file.type,
-          },
-        };
-      } else {
+      const mimeType = file.type; // e.g. "application/pdf" or "image/png"
+
+      // Safety check for supported types
+      if (mimeType !== "application/pdf" && !mimeType.startsWith("image/")) {
         return NextResponse.json(
           { error: "Unsupported file type. Please upload a PDF or Image." },
           { status: 400 }
         );
       }
+
+      inputPart = {
+        inlineData: {
+          data: buffer.toString("base64"),
+          mimeType: mimeType,
+        },
+      };
     } else if (textContext) {
       textContent = textContext;
     }
@@ -85,22 +75,65 @@ export async function POST(req: NextRequest) {
       parts.push({ text: `\n\n[CONTENT TO ANALYZE]:\n${textContent}` });
     }
 
-    // Generate content
-    // We explicitly ask for JSON in the prompt, but also can send generationConfig
-    const result = await model.generateContent({
-      contents: [{ role: "user", parts }],
-      generationConfig: {
-        responseMimeType: "application/json",
+    // Smart Model Selection: Use 'gemini-pro' (stable v1.0) as it is universally available
+    const modelsToTry = ["gemini-pro"];
+
+    let result;
+    let usedModel = "";
+    let primaryError;
+
+    console.log("Starting Analysis...");
+
+    for (const modelName of modelsToTry) {
+      try {
+        console.log(`Attempting analysis with model: ${modelName}`);
+
+        // Get the specific model instance
+        const modelInstance = genAI.getGenerativeModel({
+          model: modelName,
+          // Safety settings to prevent blocking academic content
+          safetySettings: [
+            { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+            { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+          ]
+        });
+
+        const currentResult = await modelInstance.generateContent({
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            temperature: 0.7, // Balanced creativity
+          }
+        });
+
+        // If we get here, it worked
+        result = currentResult;
+        usedModel = modelName;
+        console.log(`Success! Connected to: ${modelName}`);
+        break; // Exit loop on success
+
+      } catch (error: any) {
+        console.error(`Failed with ${modelName}:`, error.message);
+        if (!primaryError) primaryError = error; // Capture the first error as it's likely the most relevant
       }
-    });
+    }
+
+    if (!result) {
+      console.error("Analysis failed.");
+      throw primaryError || new Error("AI model failed to respond.");
+    }
 
     const response = result.response;
     const text = response.text();
-    
+
     // Parse JSON
     let jsonResponse;
     try {
       jsonResponse = JSON.parse(text);
+      // Inject meta-data about which model was used
+      jsonResponse.usedModel = usedModel;
     } catch (e) {
       console.error("Failed to parse Gemini JSON:", text);
       return NextResponse.json(
@@ -111,10 +144,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(jsonResponse);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("API Error:", error);
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      { error: "Internal Server Error: " + error.message },
       { status: 500 }
     );
   }

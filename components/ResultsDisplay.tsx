@@ -1,10 +1,13 @@
 "use client";
 
 import { AnalysisResult } from "@/lib/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { BookOpen, HelpCircle, Lightbulb, ListChecks } from "lucide-react";
+import { BookOpen, HelpCircle, Lightbulb, ListChecks, Download, Copy, Check, Sparkles } from "lucide-react";
 import ReactMarkdown from 'react-markdown';
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 interface ResultsDisplayProps {
     data: AnalysisResult;
@@ -15,97 +18,227 @@ const container = {
     show: {
         opacity: 1,
         transition: {
-            staggerChildren: 0.1,
+            staggerChildren: 0.15,
+            delayChildren: 0.2
         },
     },
 };
 
 const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 },
+    hidden: { opacity: 0, y: 30, scale: 0.95 },
+    show: {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        transition: { type: "spring", stiffness: 100 }
+    },
 };
 
 export function ResultsDisplay({ data }: ResultsDisplayProps) {
-    // Helper to ensure examQuestions is always an array
+    const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
     const questions = Array.isArray(data.examQuestions)
         ? data.examQuestions
         : typeof data.examQuestions === 'string'
-            ? [data.examQuestions] // Fallback if API returns string
+            ? [data.examQuestions]
             : [];
 
+    const handleCopy = (text: string, section: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedSection(section);
+        setTimeout(() => setCopiedSection(null), 2000);
+    };
+
+    const handleDownload = () => {
+        const content = `
+STUDY GUARDIAN AI - STUDY NOTES
+===============================
+
+SUMMARY:
+${data.summary}
+
+---------------------------------
+EXAM QUESTIONS:
+${questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}
+
+---------------------------------
+SIMPLIFIED EXPLANATION:
+${data.explanation}
+
+---------------------------------
+STUDY PLAN:
+${data.studyPlan}
+    `;
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'StudyGuardian_Notes.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    };
+
     return (
-        <motion.div
-            variants={container}
-            initial="hidden"
-            animate="show"
-            className="grid gap-6 md:grid-cols-2 lg:grid-cols-2"
-        >
-            {/* Summary Section */}
-            <motion.div variants={item} className="col-span-1 md:col-span-2">
-                <Card className="h-full border-l-4 border-l-blue-500">
-                    <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                        <BookOpen className="w-5 h-5 text-blue-500" />
-                        <CardTitle className="text-xl">Concise Summary</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                            <ReactMarkdown>{data.summary || "No summary available."}</ReactMarkdown>
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
+        <div className="space-y-8 animate-in fade-in duration-700">
+            <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">Analysis Results</h2>
+                <Button
+                    onClick={handleDownload}
+                    variant="outline"
+                    className="gap-2 border-primary/20 hover:bg-primary/5 hover:text-primary transition-colors"
+                >
+                    <Download className="w-4 h-4" />
+                    Export Notes
+                </Button>
+            </div>
 
-            {/* Exam Questions Section */}
-            <motion.div variants={item} className="row-span-2">
-                <Card className="h-full border-l-4 border-l-orange-500">
-                    <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                        <HelpCircle className="w-5 h-5 text-orange-500" />
-                        <CardTitle className="text-xl">Exam Questions</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ul className="space-y-4">
-                            {questions.length > 0 ? questions.map((q, i) => (
-                                <li key={i} className="flex gap-3 bg-secondary/30 p-3 rounded-lg">
-                                    <span className="font-bold text-orange-500 shrink-0">Q{i + 1}.</span>
-                                    <span className="text-sm text-foreground/90">{q}</span>
-                                </li>
-                            )) : (
-                                <li className="text-muted-foreground">No questions generated.</li>
-                            )}
-                        </ul>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Simplified Explanation */}
-            <motion.div variants={item}>
-                <Card className="h-full border-l-4 border-l-green-500">
-                    <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                        <Lightbulb className="w-5 h-5 text-green-500" />
-                        <CardTitle className="text-xl">Simply Explained</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                            <ReactMarkdown>{data.explanation || "No explanation available."}</ReactMarkdown>
+            <motion.div
+                variants={container}
+                initial="hidden"
+                animate="show"
+                className="grid gap-6 md:grid-cols-2 lg:grid-cols-2"
+            >
+                {/* Summary Section - Full Width, prominent */}
+                <motion.div variants={item} className="col-span-1 md:col-span-2">
+                    <Card className="glass-card border-l-4 border-l-blue-500 overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                            <BookOpen className="w-32 h-32 text-blue-500" />
                         </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
+                        <CardHeader className="flex flex-row items-start justify-between pb-2 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                    <BookOpen className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-2xl">Executive Summary</CardTitle>
+                                    <CardDescription>Key takeaways & Core concepts condensed</CardDescription>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopy(data.summary, "summary")}
+                                className="hover:bg-blue-50 text-blue-500"
+                            >
+                                {copiedSection === "summary" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="relative z-10 pt-4">
+                            <div className="prose prose-blue dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-lg">
+                                <ReactMarkdown>{data.summary || "No summary available."}</ReactMarkdown>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
 
-            {/* Study Plan */}
-            <motion.div variants={item}>
-                <Card className="h-full border-l-4 border-l-purple-500">
-                    <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                        <ListChecks className="w-5 h-5 text-purple-500" />
-                        <CardTitle className="text-xl">3-Day Study Plan</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="prose prose-sm dark:prose-invert max-w-none text-muted-foreground">
-                            <ReactMarkdown>{data.studyPlan || "No plan available."}</ReactMarkdown>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Exam Questions Section - Interactive cards */}
+                <motion.div variants={item} className="row-span-2">
+                    <Card className="glass-card border-l-4 border-l-orange-500 h-full flex flex-col">
+                        <CardHeader className="flex flex-row items-start justify-between pb-2">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                                    <HelpCircle className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl">Practice Exam</CardTitle>
+                                    <CardDescription>Test your retention</CardDescription>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopy(questions.join('\n'), "questions")}
+                                className="hover:bg-orange-50 text-orange-500"
+                            >
+                                {copiedSection === "questions" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="flex-grow pt-4">
+                            <ul className="space-y-4">
+                                {questions.length > 0 ? questions.map((q, i) => (
+                                    <motion.li
+                                        whileHover={{ x: 5 }}
+                                        key={i}
+                                        className="flex gap-4 p-4 rounded-xl bg-gradient-to-br from-white to-orange-50/50 dark:from-gray-800 dark:to-orange-900/10 border border-orange-100 dark:border-orange-900/20 shadow-sm"
+                                    >
+                                        <span className="flex items-center justify-center w-8 h-8 font-bold text-orange-600 bg-orange-100 dark:bg-orange-900/30 rounded-lg shrink-0 text-sm shadow-inner">
+                                            Q{i + 1}
+                                        </span>
+                                        <span className="text-sm font-medium pt-1.5">{q}</span>
+                                    </motion.li>
+                                )) : (
+                                    <li className="text-muted-foreground italic">No questions generated.</li>
+                                )}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Simplified Explanation */}
+                <motion.div variants={item}>
+                    <Card className="glass-card border-l-4 border-l-green-500 h-full">
+                        <CardHeader className="flex flex-row items-start justify-between pb-2">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-green-500/10 text-green-600 dark:text-green-400">
+                                    <Lightbulb className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl">Simplified Concept</CardTitle>
+                                    <CardDescription>Explained Like I'm 5</CardDescription>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopy(data.explanation, "explanation")}
+                                className="hover:bg-green-50 text-green-500"
+                            >
+                                {copiedSection === "explanation" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <div className="bg-green-50/50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-900/20 text-foreground/90">
+                                <div className="prose prose-sm prose-green dark:prose-invert max-w-none">
+                                    <ReactMarkdown>{data.explanation || "No explanation available."}</ReactMarkdown>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
+
+                {/* Study Plan */}
+                <motion.div variants={item}>
+                    <Card className="glass-card border-l-4 border-l-purple-500 h-full">
+                        <CardHeader className="flex flex-row items-start justify-between pb-2">
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 rounded-2xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                                    <ListChecks className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <CardTitle className="text-xl">Action Plan</CardTitle>
+                                    <CardDescription>3-Day Study Roadmap</CardDescription>
+                                </div>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleCopy(data.studyPlan, "studyPlan")}
+                                className="hover:bg-purple-50 text-purple-500"
+                            >
+                                {copiedSection === "studyPlan" ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            <div className="prose prose-sm prose-purple dark:prose-invert max-w-none bg-white/50 dark:bg-black/20 p-4 rounded-xl">
+                                <ReactMarkdown>{data.studyPlan || "No plan available."}</ReactMarkdown>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </motion.div>
             </motion.div>
-        </motion.div>
+        </div>
     );
 }
