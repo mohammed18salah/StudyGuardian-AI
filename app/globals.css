@@ -92,3 +92,149 @@
 .glass-card {
   @apply bg-white/80 dark:bg-gray-900/60 backdrop-blur-md border border-white/20 dark:border-white/5 shadow-sm hover:shadow-md transition-all duration-300;
 }
+
+/* Print Styles - Premium Modern Magazine / Academic Layout */
+@media print {
+  @page {
+    margin: 10mm;
+    /* Narrower margins for cover */
+    size: A4 portrait;
+  }
+
+  /* Hide UI */
+  nav,
+  footer,
+  button,
+  .no-print,
+  input,
+  textarea,
+  .glass-card>div:first-child {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  #printable-content {
+    display: block !important;
+  }
+
+  /* Cover Page */
+  .print-cover-page {
+    height: 98vh;
+    /* Full page height */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border: 10px double #000;
+    margin: 0;
+    page-break-after: always;
+    /* Force break after cover */
+  }
+
+  .cover-content {
+    padding: 40px;
+  }
+
+  .print-title-large {
+    font-size: 60pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin-bottom: 20px;
+  }
+
+  .print-subtitle {
+    font-size: 24pt;
+    font-weight: 300;
+    color: #555;
+    margin-bottom: 60px;
+  }
+
+  .print-meta-large {
+    margin-top: 50px;
+    font-size: 14pt;
+    border-top: 2px solid #000;
+    padding-top: 20px;
+    display: inline-block;
+  }
+
+  /* Content Pages Container */
+  .print-body {
+    padding: 20px;
+  }
+
+  /* Section Styling */
+  .section {
+    margin-bottom: 30px;
+  }
+
+  .section h2 {
+    font-size: 18pt;
+    font-weight: 800;
+    text-transform: uppercase;
+    border-bottom: 3px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+    margin-top: 0;
+    color: #000;
+  }
+
+  /* Content Columns */
+  .two-col {
+    column-count: 2;
+    column-gap: 30px;
+    text-align: justify;
+  }
+
+  /* Typography */
+  p,
+  li {
+    font-size: 11pt;
+    line-height: 1.6;
+    margin-bottom: 12px;
+    color: #222;
+  }
+
+  strong {
+    color: #000;
+    font-weight: 800;
+  }
+
+  /* Exam Questions Style */
+  .question-item {
+    background-color: #f0f0f0 !important;
+    border-left: 5px solid #000 !important;
+    padding: 15px;
+    margin-bottom: 15px;
+    break-inside: avoid;
+  }
+
+  /* Footer */
+  .print-footer {
+    position: fixed;
+    bottom: 5mm;
+    left: 10mm;
+    right: 10mm;
+    border-top: 1px solid #ddd;
+    padding-top: 5px;
+    font-size: 9pt;
+    color: #777;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+}

@@ -5,23 +5,31 @@ import { HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 // Configure maximum duration for the API route
 export const maxDuration = 60;
 
-const PROMPT_INSTRUCTIONS = `
-You are an AI study assistant.
-Analyze the provided lecture content.
-Generate:
-1. A concise summary
-2. 5 exam-style questions
-3. A simplified explanation
-4. A 3-day study plan
+const PROMPT_INSTRUCTIONS = (language: string = "english") => `
+ROLE: You are an efficient academic tutor. Your goal is to provide a QUICK, HIGH-IMPACT study summary.
 
-Format the response in clear labeled sections.
-RETURN THE RESPONSE AS A VALID JSON OBJECT ONLY.
-Structure your JSON like this:
+TASK: Analyze the lecture content and output a CONCISE study guide.
+
+LANGUAGE: ${language === "arabic" ? "Arabic (العربية)" : "English"}.
+
+CONSTRAINTS:
+- Keep the summary UNDER 300 words. Focus ONLY on the main ideas.
+- Keep the explanation UNDER 150 words.
+- Be direct and to the point. Speed is key.
+
+OUTPUT FORMAT: Return ONLY a raw JSON object.
+JSON Structure:
 {
-  "summary": "markdown string",
-  "examQuestions": ["string", "string", ...],
-  "explanation": "markdown string",
-  "studyPlan": "markdown string"
+  "summary": "Concise markdown string. Use bullet points for speed reading. Max 300 words.",
+  "examQuestions": [
+    "Question 1 (Direct & Clear)",
+    "Question 2",
+    "Question 3",
+    "Question 4",
+    "Question 5"
+  ],
+  "explanation": "Brief, simple info using the 'Feynman Technique'. Max 150 words.",
+  "studyPlan": "Short, actionable 3-day checklist (Markdown)."
 }
 `;
 
@@ -30,6 +38,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const textContext = formData.get("text") as string | null;
+    const language = formData.get("language") as string || "english";
 
     if (!file && !textContext) {
       return NextResponse.json(
@@ -67,7 +76,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Construct the parts for Gemini
-    const parts: any[] = [{ text: PROMPT_INSTRUCTIONS }];
+    const parts: any[] = [{ text: PROMPT_INSTRUCTIONS(language) }];
 
     if (inputPart) {
       parts.push(inputPart);
@@ -75,8 +84,8 @@ export async function POST(req: NextRequest) {
       parts.push({ text: `\n\n[CONTENT TO ANALYZE]:\n${textContent}` });
     }
 
-    // Smart Model Selection: Use 'gemini-pro' (stable v1.0) as it is universally available
-    const modelsToTry = ["gemini-pro"];
+    // Smart Model Selection: Use 'gemini-2.5-flash' as confirmed available by user API check
+    const modelsToTry = ["gemini-2.5-flash"];
 
     let result;
     let usedModel = "";

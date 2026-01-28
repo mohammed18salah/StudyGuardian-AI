@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FileUploader } from "@/components/FileUploader";
 import { ResultsDisplay } from "@/components/ResultsDisplay";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { AnalysisResult } from "@/lib/types";
-import { Loader2, Sparkles, AlertCircle, FileText, Bot, BrainCircuit, GraduationCap } from "lucide-react";
+import { Loader2, Sparkles, AlertCircle, FileText, Bot, BrainCircuit, GraduationCap, Languages } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Footer } from "@/components/Footer";
 
@@ -17,6 +17,34 @@ export default function Home() {
   const [results, setResults] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inputType, setInputType] = useState<"file" | "text">("file");
+  const [language, setLanguage] = useState<"english" | "arabic">("english");
+
+  // Speed Optimization: Load cached results instantly on mount
+  useEffect(() => {
+    const cachedResults = localStorage.getItem("studyguardian_results");
+    const cachedLanguage = localStorage.getItem("studyguardian_language");
+
+    if (cachedResults) {
+      try {
+        setResults(JSON.parse(cachedResults));
+      } catch (e) { console.error("Cache parse error", e); }
+    }
+
+    if (cachedLanguage === "arabic" || cachedLanguage === "english") {
+      setLanguage(cachedLanguage);
+    }
+  }, []);
+
+  // Speed Optimization: Save state to cache whenever it changes
+  useEffect(() => {
+    if (results) {
+      localStorage.setItem("studyguardian_results", JSON.stringify(results));
+    }
+  }, [results]);
+
+  useEffect(() => {
+    localStorage.setItem("studyguardian_language", language);
+  }, [language]);
 
   const handleAnalysis = async () => {
     if (!selectedFile && !textInput.trim()) {
@@ -29,6 +57,8 @@ export default function Home() {
     setResults(null);
 
     const formData = new FormData();
+    formData.append("language", language);
+
     if (inputType === "file" && selectedFile) {
       formData.append("file", selectedFile);
     } else if (inputType === "text") {
@@ -60,6 +90,28 @@ export default function Home() {
       }
 
       setResults(data);
+
+      // Trigger celebration confetti!
+      import("canvas-confetti").then((confetti) => {
+        const duration = 3000;
+        const animationEnd = Date.now() + duration;
+        const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+        const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+
+        const interval: any = setInterval(function () {
+          const timeLeft = animationEnd - Date.now();
+
+          if (timeLeft <= 0) {
+            return clearInterval(interval);
+          }
+
+          const particleCount = 50 * (timeLeft / duration);
+          confetti.default({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+          confetti.default({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+        }, 250);
+      });
+
       // Smooth scroll to results
       setTimeout(() => {
         document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
@@ -100,6 +152,22 @@ export default function Home() {
             <a href="#" className="hover:text-primary transition-colors">Features</a>
             <a href="https://deepmind.google/technologies/gemini/" target="_blank" className="hover:text-primary transition-colors">Gemini Models</a>
           </div>
+
+          {/* Language Toggle */}
+          <div className="flex items-center gap-2 bg-white/50 dark:bg-black/50 p-1 rounded-lg border border-white/20">
+            <button
+              onClick={() => setLanguage("english")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${language === 'english' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => setLanguage("arabic")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all flex items-center gap-1.5 ${language === 'arabic' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              <Languages className="w-3 h-3" /> Arabic
+            </button>
+          </div>
         </nav>
 
         {/* Hero Section */}
@@ -110,7 +178,7 @@ export default function Home() {
             className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-white/5 border border-white/20 shadow-sm backdrop-blur-md text-primary font-semibold text-sm mb-4"
           >
             <Sparkles className="w-4 h-4" />
-            <span>Powered by Google Gemini 2.0 & 1.5 Pro</span>
+            <span>Powered by Google Gemini</span>
           </motion.div>
 
           <motion.h1
@@ -149,8 +217,8 @@ export default function Home() {
                 <button
                   onClick={() => setInputType("file")}
                   className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${inputType === "file"
-                      ? "bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-black/5"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                    ? "bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-black/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/50"
                     }`}
                 >
                   <FileText className="w-4 h-4" /> Upload Document
@@ -158,8 +226,8 @@ export default function Home() {
                 <button
                   onClick={() => setInputType("text")}
                   className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${inputType === "text"
-                      ? "bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-black/5"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/50"
+                    ? "bg-white dark:bg-gray-800 text-primary shadow-sm ring-1 ring-black/5"
+                    : "text-muted-foreground hover:text-foreground hover:bg-white/50"
                     }`}
                 >
                   <Bot className="w-4 h-4" /> Paste Content
